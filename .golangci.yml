@@ -1,0 +1,88 @@
+version: "2"
+
+run:
+  timeout: 5m
+  allow-parallel-runners: true
+
+linters:
+  default: all
+  disable:
+    - gomodguard
+    - gomoddirectives
+    - wsl
+
+  settings:
+    depguard:
+      rules:
+        main:
+          files:
+            - $all
+          allow:
+            - $gostd
+            - github.com/aws/aws-sdk-go-v2/aws
+            - github.com/aws/aws-sdk-go-v2/config
+            - github.com/aws/aws-sdk-go-v2/service/sts
+            - github.com/stretchr/testify/assert
+            - github.com/stretchr/testify/require
+            - tkalus.dev/mostly-harmless/httpunix
+            - tkalus.dev/mostly-harmless/httpunixagent
+            - tkalus.dev/mostly-harmless/exedev-wif
+    exhaustruct:
+      exclude:
+        # - "^log/slog\\.HandlerOptions$"
+        - "^net\\.Dialer$"
+        # - "^net\\.KeepAliveConfig$"
+        # - "^net\\.ListenConfig$"
+        # - "^net/http\\.Client$"
+        # - "^net/http\\.Server$"
+        # - "^net/http\\.Transport$"
+    forbidigo:
+      forbid:
+        - pattern: ^fmt\.Print.*$
+          msg: Do not commit print statements
+        - pattern: ^slog.Debug$
+          msg: Use slog.DebugContext() instead
+        - pattern: ^slog.Error$
+          msg: Use slog.ErrorContext() instead
+        - pattern: ^slog.Info$
+          msg: Use slog.InfoContext() instead
+        - pattern: ^slog.Warn$
+          msg: Use slog.WarnContext() instead
+    importas:
+      alias:
+        - pkg: github.com/aws/aws-sdk-go-v2/config
+          alias: awsConfig
+        - pkg: .+/(\w+)/v[0-9]+\.[0-9]+\.[0-9]+
+          alias: $1
+      no-unaliased: false
+      no-extra-aliases: true
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - tkalus.dev/mostly-harmless/exedev-wif
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
