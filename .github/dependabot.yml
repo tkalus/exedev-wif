@@ -19,3 +19,22 @@ updates:
       go-modules:
         patterns:
           - "*"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 5
+    assignees:
+      - "tkalus"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "github-actions"
+      include: "scope"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
