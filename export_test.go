@@ -64,3 +64,7 @@ func ExportTestCachedCredentials(
 func ExportTestCredentialCacheSkew() time.Duration {
 	return credentialCacheSkew
 }
+
+func ExportTestRoleSessionNameFromHostname(path string, integration string) string {
+	return roleSessionNameFromHostname(path, integration)
+}

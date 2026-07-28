@@ -6,6 +6,8 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -162,6 +164,49 @@ func TestCredentialCacheDropsExpiringCredentials(t *testing.T) {
 	got := exedev.ExportTestCachedCredentials(service, "default")
 	if got != nil {
 		t.Fatalf("cached credentials = %p, want nil", got)
+	}
+}
+
+func TestRoleSessionNameUsesHostnameFile(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "hostname")
+
+	err := os.WriteFile(path, []byte("runner-01\n"), 0o600)
+	if err != nil {
+		t.Fatalf("write hostname: %v", err)
+	}
+
+	got := exedev.ExportTestRoleSessionNameFromHostname(path, "default")
+	if got != "runner-01" {
+		t.Fatalf("role session name = %q, want runner-01", got)
+	}
+}
+
+func TestRoleSessionNameFallsBackToIntegrationWhenHostnameMissing(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "missing")
+
+	got := exedev.ExportTestRoleSessionNameFromHostname(path, "default")
+	if got != "default" {
+		t.Fatalf("role session name = %q, want default", got)
+	}
+}
+
+func TestRoleSessionNameFallsBackToIntegrationWhenHostnameEmpty(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "hostname")
+
+	err := os.WriteFile(path, []byte("\n"), 0o600)
+	if err != nil {
+		t.Fatalf("write hostname: %v", err)
+	}
+
+	got := exedev.ExportTestRoleSessionNameFromHostname(path, "default")
+	if got != "default" {
+		t.Fatalf("role session name = %q, want default", got)
 	}
 }
 

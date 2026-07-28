@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +21,7 @@ const (
 	defaultAWSRegion     = "us-east-1"
 	exeDevDefaultTimeout = 15 * time.Second
 	credentialCacheSkew  = 5 * time.Minute
+	hostnamePath         = "/etc/hostname"
 )
 
 var integrationRE = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
@@ -151,7 +154,7 @@ func (e *ExeDev) getCredentials(
 		//nolint:exhaustruct // Optional AWS request fields intentionally use SDK zero values.
 		&sts.AssumeRoleWithWebIdentityInput{
 			RoleArn:          aws.String(metadata.RoleARN),
-			RoleSessionName:  aws.String("exe-" + integration),
+			RoleSessionName:  aws.String(roleSessionName(integration)),
 			WebIdentityToken: aws.String(token.Token),
 		},
 	)
@@ -174,6 +177,24 @@ func (e *ExeDev) getCredentials(
 	e.storeCredentials(integration, credentials)
 
 	return credentials, nil
+}
+
+func roleSessionName(integration string) string {
+	return roleSessionNameFromHostname(hostnamePath, integration)
+}
+
+func roleSessionNameFromHostname(path string, integration string) string {
+	hostnamePathname, err := os.ReadFile(path)
+	if err != nil {
+		return integration
+	}
+
+	hostame := strings.TrimSpace(string(hostnamePathname))
+	if hostame == "" {
+		return integration
+	}
+
+	return hostame
 }
 
 func (e *ExeDev) cachedCredentials(integration string) *credentialProcessResponse {
