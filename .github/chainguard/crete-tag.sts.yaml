@@ -1,0 +1,5 @@
+issuer: https://token.actions.githubusercontent.com
+subject: repo:tkalus/exedev-wif:ref:refs/heads/main
+
+permissions:
+  contents: write

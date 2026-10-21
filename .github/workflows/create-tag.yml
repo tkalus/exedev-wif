@@ -1,0 +1,39 @@
+name: Create Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "New tag (e.g. v1.2)"
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Octo STS token
+        uses: octo-sts/action@6177b4481c00308b3839969c3eca88c96a91775f # v1.0.0
+        id: sts
+        with:
+          scope: ${{ github.repository }}
+          identity: create-tag
+
+      - name: Create tag
+        env:
+          GH_TOKEN: ${{ steps.sts.outputs.token }}
+          TAG: ${{ inputs.tag }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          git check-ref-format "refs/tags/$TAG"
+
+          gh api \
+            --method POST \
+            "repos/$REPO/git/refs" \
+            -f ref="refs/tags/$TAG" \
+            -f sha="$SHA"
