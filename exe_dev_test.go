@@ -1,6 +1,6 @@
 package main_test
 
-//nolint:depguard,importas // External tests intentionally import the command package via export_test wrappers.
+//nolint:importas // External tests intentionally import the command package via export_test wrappers.
 import (
 	"context"
 	"errors"
