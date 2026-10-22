@@ -11,10 +11,12 @@ import (
 )
 
 const (
-	helpArg  = "--help"
-	extraArg = "extra"
-	getCmd   = "get"
-	setupCmd = "setup"
+	helpArg         = "--help"
+	extraArg        = "extra"
+	getCmd          = "get"
+	awsSetupCmd     = "aws-setup"
+	gcpSetupCmd     = "gcp-setup"
+	integrationFlag = "--integration"
 )
 
 func TestRunWithOutputWritesRootHelpWithoutArgs(t *testing.T) {
@@ -30,7 +32,8 @@ func TestRunWithOutputWritesRootHelpWithoutArgs(t *testing.T) {
 	assertContains(t, stdout.String(), "usage: exedev-wif [--help] <command>")
 	assertContains(t, stdout.String(), "serve")
 	assertContains(t, stdout.String(), "get")
-	assertContains(t, stdout.String(), "setup")
+	assertContains(t, stdout.String(), awsSetupCmd)
+	assertContains(t, stdout.String(), gcpSetupCmd)
 }
 
 func TestRunWithOutputWritesRootHelpForHelpAliases(t *testing.T) {
@@ -129,12 +132,12 @@ func TestRunWithOutputSetupHelp(t *testing.T) {
 
 	var stdout bytes.Buffer
 
-	err := exedev.ExportTestRunWithOutput([]string{setupCmd, helpArg}, &stdout)
+	err := exedev.ExportTestRunWithOutput([]string{awsSetupCmd, helpArg}, &stdout)
 	if err != nil {
 		t.Fatalf("run setup help: %v", err)
 	}
 
-	assertContains(t, stdout.String(), "usage: exedev-wif setup")
+	assertContains(t, stdout.String(), "usage: exedev-wif aws-setup")
 	assertContains(t, stdout.String(), "--integration NAME")
 }
 
@@ -143,7 +146,7 @@ func TestRunWithOutputSetupRejectsPositionalArgs(t *testing.T) {
 
 	var stdout bytes.Buffer
 
-	err := exedev.ExportTestRunWithOutput([]string{setupCmd, extraArg}, &stdout)
+	err := exedev.ExportTestRunWithOutput([]string{awsSetupCmd, extraArg}, &stdout)
 	if !errors.Is(err, exedev.ExportTestErrSetupPositional()) {
 		t.Fatalf("error = %v, want setup positional", err)
 	}
@@ -155,7 +158,7 @@ func TestRunWithOutputSetupRendersScriptWithSocketAndIntegration(t *testing.T) {
 	var stdout bytes.Buffer
 
 	err := exedev.ExportTestRunWithOutput(
-		[]string{setupCmd, "--socket", "/tmp/exedev.sock", "--integration", "prod"},
+		[]string{awsSetupCmd, "--socket", "/tmp/exedev.sock", integrationFlag, "prod"},
 		&stdout,
 	)
 	if err != nil {
@@ -167,6 +170,63 @@ func TestRunWithOutputSetupRendersScriptWithSocketAndIntegration(t *testing.T) {
 	assertContains(t, output, "integration='prod'")
 	assertContains(t, output, "credential_process =")
 	assertContains(t, output, "/aws/$integration")
+}
+
+func TestRunWithOutputGCPSetup(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+
+	err := exedev.ExportTestRunWithOutput(
+		[]string{gcpSetupCmd, integrationFlag, "gcpwif", "--team"}, &stdout,
+	)
+	if err != nil {
+		t.Fatalf("run GCP setup: %v", err)
+	}
+
+	assertContains(t, stdout.String(), "integration='gcpwif'")
+	assertContains(t, stdout.String(), "team_flag='--team'")
+	assertContains(t, stdout.String(), "application_default_credentials.json")
+}
+
+func TestRunWithOutputGCPSetupHelp(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+
+	err := exedev.ExportTestRunWithOutput([]string{gcpSetupCmd, helpArg}, &stdout)
+	if err != nil {
+		t.Fatalf("run GCP setup help: %v", err)
+	}
+
+	assertContains(t, stdout.String(), "usage: exedev-wif gcp-setup")
+	assertContains(t, stdout.String(), "--team")
+}
+
+func TestSetupCommandsRejectInvalidArguments(t *testing.T) {
+	t.Parallel()
+
+	for _, args := range [][]string{
+		{"setup"},
+		{awsSetupCmd, "--provider", "aws"},
+		{gcpSetupCmd, "--provider", "gcp"},
+		{awsSetupCmd, "--team"},
+		{gcpSetupCmd, "--socket", "/tmp/exedev.sock"},
+		{gcpSetupCmd, extraArg},
+		{awsSetupCmd, integrationFlag, "Invalid"},
+		{gcpSetupCmd, integrationFlag, "Invalid"},
+	} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			t.Parallel()
+
+			var stdout bytes.Buffer
+
+			err := exedev.ExportTestRunWithOutput(args, &stdout)
+			if err == nil || stdout.Len() != 0 {
+				t.Fatalf("error = %v, output = %q; want rejection without script", err, stdout.String())
+			}
+		})
+	}
 }
 
 func TestWantsHelp(t *testing.T) {

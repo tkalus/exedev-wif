@@ -27,7 +27,7 @@ var (
 	errUnknownCommand  = errors.New("unknown command")
 	errServePositional = errors.New("serve takes no positional arguments")
 	errGetUsage        = errors.New("usage: exedev-wif get [--socket PATH] /aws/INTEGRATION")
-	errSetupPositional = errors.New("setup takes no positional arguments")
+	errSetupPositional = errors.New("takes no positional arguments")
 	errServerStatus    = errors.New("server returned unsuccessful status")
 )
 
@@ -62,8 +62,12 @@ func runWithOutput(args []string, stdout io.Writer) error {
 		return runServe(args[1:], stdout)
 	case "get":
 		return runGet(args[1:], stdout)
-	case "setup":
-		return runSetup(args[1:], stdout)
+	case "aws-setup":
+		return runAWSSetup(args[1:], stdout)
+	case "gcp-setup":
+		return runGCPSetup(args[1:], stdout)
+	case "gcp-config":
+		return runGCPConfig(args[1:], stdout)
 	default:
 		return fmt.Errorf("%w: %q", errUnknownCommand, args[0])
 	}
@@ -190,15 +194,15 @@ func fetchCredentials(ctx context.Context, agent *httpunixagent.Agent, path stri
 	return nil
 }
 
-func runSetup(args []string, stdout io.Writer) error {
+func runAWSSetup(args []string, stdout io.Writer) error {
 	if wantsHelp(args) {
-		writeSetupHelp(stdout)
+		writeAWSSetupHelp(stdout)
 
 		return nil
 	}
 
 	defaultSocket, _ := httpunixagent.RuntimePaths("exedev-wif")
-	flags := flag.NewFlagSet("setup", flag.ContinueOnError)
+	flags := flag.NewFlagSet("aws-setup", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 
 	socketPath := flags.String("socket", defaultSocket, "Unix socket path")
@@ -206,11 +210,15 @@ func runSetup(args []string, stdout io.Writer) error {
 
 	err := flags.Parse(args)
 	if err != nil {
-		return fmt.Errorf("parse setup flags: %w", err)
+		return fmt.Errorf("parse aws-setup flags: %w", err)
 	}
 
 	if flags.NArg() != 0 {
-		return errSetupPositional
+		return fmt.Errorf("aws-setup %w", errSetupPositional)
+	}
+
+	if !integrationRE.MatchString(*integration) {
+		return errInvalidIntegration
 	}
 
 	executable, err := installedExecutable()
@@ -220,7 +228,7 @@ func runSetup(args []string, stdout io.Writer) error {
 
 	_, err = fmt.Fprintf(
 		stdout,
-		setupScript,
+		awsSetupScript,
 		shellQuote(executable),
 		shellQuote(*socketPath),
 		shellQuote(*integration),
@@ -258,9 +266,11 @@ func writeRootHelp(writer io.Writer) {
 	_, _ = io.WriteString(writer, `usage: exedev-wif [--help] <command>
 
 Commands:
-  serve   Run the local credential agent server.
-  get     Fetch AWS credential_process credentials from the agent.
-  setup   Print a setup script for systemd user service and AWS config.
+  serve       Run the local credential agent server.
+  get         Fetch AWS credential_process credentials from the agent.
+  aws-setup   Print an AWS default-credential setup script.
+  gcp-setup   Print a GCP default-credential setup script.
+  gcp-config  Generate a Google external-account credential configuration.
 
 Run "exedev-wif <command> --help" for command details.
 `)
@@ -287,12 +297,12 @@ Options:
 `)
 }
 
-func writeSetupHelp(writer io.Writer) {
-	_, _ = io.WriteString(writer, `usage: exedev-wif setup [--socket PATH] [--integration NAME]
+func writeAWSSetupHelp(writer io.Writer) {
+	_, _ = io.WriteString(writer, `usage: exedev-wif aws-setup [--integration NAME] [--socket PATH]
 
 Print a shell script that can be piped to bash:
 
-  exedev-wif setup | bash
+  exedev-wif aws-setup | bash
 
 The script installs a systemd user service for:
 
@@ -305,11 +315,11 @@ to call this installed exedev-wif binary with:
 
 Options:
   --socket PATH       Unix socket path. Defaults under XDG_RUNTIME_DIR or /tmp.
-  --integration NAME  exe.dev integration name for /aws/NAME. Default: default.
+  --integration NAME  exe.dev integration name. Default: default.
 `)
 }
 
-const setupScript = `#!/usr/bin/env bash
+const awsSetupScript = `#!/usr/bin/env bash
 set -euo pipefail
 
 exedev_wif=%s

@@ -41,6 +41,16 @@ func ExportTestShellQuote(value string) string {
 	return shellQuote(value)
 }
 
+func ExportTestWriteGCPConfig(
+	ctx context.Context, client *http.Client, integration string, team bool, stdout io.Writer,
+) error {
+	return writeGCPConfig(ctx, client, integration, team, stdout)
+}
+
+func ExportTestWriteGCPSetup(stdout io.Writer, executable, integration string, team bool) error {
+	return writeGCPSetup(stdout, executable, integration, team)
+}
+
 //nolint:ireturn // Test wrapper preserves the generic helper signature under test.
 func ExportTestGetJSON[T any](ctx context.Context, client *http.Client, url string) (T, error) {
 	return getJSON[T](ctx, client, url)
