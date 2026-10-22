@@ -7,6 +7,7 @@ run:
 linters:
   default: all
   disable:
+    - exhaustruct
     - gomodguard
     - gomoddirectives
     - wsl
@@ -24,18 +25,13 @@ linters:
             - github.com/aws/aws-sdk-go-v2/service/sts
             - github.com/stretchr/testify/assert
             - github.com/stretchr/testify/require
+            - tkalus.dev/exedev-wif
             - tkalus.dev/mostly-harmless/httpunix
             - tkalus.dev/mostly-harmless/httpunixagent
-            - tkalus.dev/mostly-harmless/exedev-wif
-    exhaustruct:
-      exclude:
-        # - "^log/slog\\.HandlerOptions$"
-        - "^net\\.Dialer$"
-        # - "^net\\.KeepAliveConfig$"
-        # - "^net\\.ListenConfig$"
-        # - "^net/http\\.Client$"
-        # - "^net/http\\.Server$"
-        # - "^net/http\\.Transport$"
+    exhaustruct_v5:
+      ignore-patterns:
+        - '^github\.com/aws/aws-sdk-go-v2/aws\.Config$'
+        - '^tkalus\.dev/exedev-wif\.ExportTestCredentialProcessResponse$'
     forbidigo:
       forbid:
         - pattern: ^fmt\.Print.*$

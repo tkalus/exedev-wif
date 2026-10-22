@@ -15,12 +15,14 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/aws/aws-sdk-go-v2/service/sts/types"
 )
 
 const (
 	defaultAWSRegion     = "us-east-1"
 	exeDevDefaultTimeout = 15 * time.Second
 	credentialCacheSkew  = 5 * time.Minute
+	secondsPerHour       = 3600
 	hostnamePath         = "/etc/hostname"
 )
 
@@ -153,9 +155,14 @@ func (e *ExeDev) getCredentials(
 		ctx,
 		//nolint:exhaustruct // Optional AWS request fields intentionally use SDK zero values.
 		&sts.AssumeRoleWithWebIdentityInput{
-			RoleArn:          aws.String(metadata.RoleARN),
-			RoleSessionName:  aws.String(roleSessionName(integration)),
-			WebIdentityToken: aws.String(token.Token),
+			RoleArn:                 aws.String(metadata.RoleARN),
+			RoleSessionName:         aws.String(roleSessionName(integration)),
+			WebIdentityToken:        aws.String(token.Token),
+			DurationSeconds:         aws.Int32(secondsPerHour),
+			MinimumSessionTokenSize: aws.Int32(0),
+			Policy:                  aws.String(""),
+			PolicyArns:              []types.PolicyDescriptorType{},
+			ProviderId:              aws.String(""),
 		},
 	)
 	if err != nil {
